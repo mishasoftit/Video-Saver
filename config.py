@@ -1,0 +1,125 @@
+"""
+Configuration settings for the Telegram Video Downloader Bot
+"""
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+class Config:
+    # Bot settings
+    TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
+    
+    # Download settings
+    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', 50))
+    DOWNLOAD_TIMEOUT = int(os.getenv('DOWNLOAD_TIMEOUT', 300))
+    TEMP_DIR = os.getenv('TEMP_DIR', './downloads')
+    
+    # Rate limiting
+    MAX_DOWNLOADS_PER_HOUR = int(os.getenv('MAX_DOWNLOADS_PER_HOUR', 5))
+    
+    # Logging
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    
+    # Ensure temp directory exists
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    
+    # yt-dlp base options
+    YT_DLP_OPTIONS = {
+        'outtmpl': f'{TEMP_DIR}/%(title)s.%(ext)s',
+        'format': 'best[filesize<50M]',
+        'noplaylist': True,
+        'extractaudio': False,
+        'embed_subs': False,
+        'writesubtitles': False,
+        'writeautomaticsub': False,
+    }
+
+# Enhanced download options with video and audio support
+DOWNLOAD_OPTIONS = {
+    'video': {
+        '720p': {
+            'format': 'best[height<=720][filesize<50M]',
+            'emoji': '📱',
+            'description': '720p (Fast)',
+            'type': 'video'
+        },
+        '1080p': {
+            'format': 'best[height<=1080][filesize<50M]',
+            'emoji': '🎬',
+            'description': '1080p (Balanced)',
+            'type': 'video'
+        },
+        'best': {
+            'format': 'best[filesize<50M]',
+            'emoji': '⭐',
+            'description': 'Best (Highest)',
+            'type': 'video'
+        }
+    },
+    'audio': {
+        'mp3': {
+            'format': 'bestaudio[ext=m4a]/bestaudio',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'emoji': '🎵',
+            'description': 'MP3 (Universal)',
+            'type': 'audio'
+        },
+        'm4a': {
+            'format': 'bestaudio[ext=m4a]/bestaudio',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'm4a',
+                'preferredquality': '192',
+            }],
+            'emoji': '🎼',
+            'description': 'M4A (High Quality)',
+            'type': 'audio'
+        },
+        'ogg': {
+            'format': 'bestaudio[ext=webm]/bestaudio',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'vorbis',
+                'preferredquality': '192',
+            }],
+            'emoji': '🎶',
+            'description': 'OGG (Open Source)',
+            'type': 'audio'
+        }
+    }
+}
+
+# Error messages
+ERROR_MESSAGES = {
+    'rate_limit': "⏰ Rate limit exceeded. You can download {max_requests} videos per hour.\n⏳ Try again in {reset_time} minutes.",
+    'invalid_url': "❌ Invalid URL format. Please provide a valid video URL.",
+    'unsupported': "❌ This platform is not supported or the video is unavailable.",
+    'file_too_large': "❌ Video file is too large (>50MB). Try selecting a lower quality.",
+    'network_error': "❌ Network error. Please check your connection and try again.",
+    'download_failed': "❌ Download failed. The video might be private or deleted.",
+    'timeout': "❌ Download timeout. The video might be too large or server is slow.",
+    'ffmpeg_missing': "❌ FFmpeg not found. Audio extraction requires FFmpeg to be installed.",
+    'audio_extraction_failed': "❌ Failed to extract audio. The video might not contain audio.",
+    'unsupported_audio_format': "❌ Audio format not supported for this video.",
+    'audio_too_large': "❌ Audio file is too large (>50MB). Try a different format.",
+    'no_audio_stream': "❌ No audio stream found in this video."
+}
+
+# Platform-specific error messages
+PLATFORM_ERROR_MESSAGES = {
+    'youtube': "❌ YouTube video unavailable. It might be private, deleted, or region-restricted.",
+    'tiktok': "❌ TikTok video unavailable. It might be private or deleted.",
+    'instagram': "❌ Instagram content unavailable. Private accounts are not supported.",
+    'twitter': "❌ Twitter video unavailable. It might be private or deleted.",
+    'generic': "❌ Video unavailable. The content might be private, deleted, or unsupported."
+}

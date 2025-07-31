@@ -1,0 +1,20 @@
+# Telegram Bot Framework
+python-telegram-bot==20.7
+
+# Video Downloading
+yt-dlp>=2023.12.30
+
+# Environment Management
+python-dotenv==1.0.0
+
+# Async File Operations
+aiofiles==23.2.1
+
+# Rate Limiting
+asyncio-throttle==1.0.2
+
+# Additional Utilities
+requests>=2.31.0
+
+# Audio Processing (requires FFmpeg to be installed separately)
+ffmpeg-python>=0.2.0
