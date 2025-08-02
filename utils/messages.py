@@ -35,38 +35,40 @@ class MessageTemplates:
         return (
             "🎬 <b>Video Downloader Bot</b>\n\n"
             "I can download videos from YouTube, TikTok, Instagram, Twitter, and many other platforms!\n\n"
-            "📝 <b>Usage:</b> /download &lt;video_url&gt;\n"
-            "❓ <b>Help:</b> /help\n\n"
-            "Just send me a video URL and I'll handle the rest! ✨"
+            "🚀 <b>How to use:</b>\n"
+            "• Just send me any video URL\n"
+            "• Or use the buttons below\n\n"
+            "✨ <b>No commands needed!</b> Simply paste a link and I'll handle the rest!"
         )
     
     @staticmethod
     def help_message() -> str:
         return (
             "🆘 <b>Help - Video Downloader Bot</b>\n\n"
-            "📋 <b>Available Commands:</b>\n"
-            "• /start - Welcome message\n"
-            "• /download &lt;url&gt; - Download video or extract audio\n"
-            "• /help - Show this help message\n\n"
+            "🚀 <b>How to Download:</b>\n"
+            "1. Send me any video URL\n"
+            "2. Choose Video or Audio\n"
+            "3. Select quality/format\n"
+            "4. Wait for your download!\n\n"
             "🌐 <b>Supported Platforms:</b>\n"
             "• YouTube (youtube.com, youtu.be)\n"
             "• TikTok (tiktok.com)\n"
             "• Instagram (instagram.com)\n"
             "• Twitter (twitter.com, x.com)\n"
-            "• And many more!\n\n"
+            "• And 1000+ more platforms!\n\n"
             "🎬 <b>Video Quality Options:</b>\n"
-            "• 720p - Fast download, smaller file\n"
-            "• 1080p - Balanced quality and size\n"
-            "• Best - Highest available quality\n\n"
+            "• 📱 720p - Fast download, smaller file\n"
+            "• 🎬 1080p - Balanced quality and size\n"
+            "• ⭐ Best - Highest available quality\n\n"
             "🎵 <b>Audio Format Options:</b>\n"
-            "• MP3 - Universal compatibility (192 kbps)\n"
-            "• M4A - High quality, smaller size (192 kbps)\n"
-            "• OGG - Open source format (192 kbps)\n\n"
+            "• 🎵 MP3 - Universal compatibility\n"
+            "• 🎼 M4A - High quality, smaller size\n"
+            "• 🎶 OGG - Open source format\n\n"
             "⚠️ <b>Limitations:</b>\n"
             "• Maximum file size: 50MB\n"
             "• Rate limit: 5 downloads per hour\n"
             "• Private content not supported\n\n"
-            "💡 <b>Tip:</b> Audio files are typically much smaller than videos!"
+            "💡 <b>Tip:</b> Just paste any video link - no commands needed!"
         )
     
     @staticmethod
@@ -159,4 +161,33 @@ class MessageTemplates:
             "Please provide a valid video URL.\n\n"
             "📝 <b>Usage:</b> /download &lt;video_url&gt;\n"
             "💡 <b>Example:</b> /download https://youtube.com/watch?v=..."
+        )
+    
+    @staticmethod
+    def no_url_found_message() -> str:
+        return (
+            "🤔 <b>No video URL found!</b>\n\n"
+            "Please send me a valid video URL from any supported platform.\n\n"
+            "💡 <b>Examples:</b>\n"
+            "• https://youtube.com/watch?v=...\n"
+            "• https://tiktok.com/@user/video/...\n"
+            "• https://instagram.com/p/...\n\n"
+            "Or use the buttons below to get started!"
+        )
+    
+    @staticmethod
+    def download_prompt_message() -> str:
+        return (
+            "📥 <b>Ready to Download!</b>\n\n"
+            "Send me any video URL and I'll help you download it.\n\n"
+            "🌐 <b>Supported platforms:</b> YouTube, TikTok, Instagram, Twitter, and 1000+ more!\n\n"
+            "Just paste the link - no commands needed! ✨"
+        )
+    
+    @staticmethod
+    def main_menu_message() -> str:
+        return (
+            "🏠 <b>Main Menu</b>\n\n"
+            "What would you like to do?\n\n"
+            "💡 <b>Tip:</b> You can also just send me any video URL directly!"
         )

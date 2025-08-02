@@ -74,18 +74,37 @@ async def main():
         
         logger.info("Bot handlers configured successfully")
         
+        # Initialize the application
+        await application.initialize()
+        
         # Start the bot
         logger.info("Bot is starting... Press Ctrl+C to stop")
-        await application.run_polling(
+        await application.start()
+        await application.updater.start_polling(
             allowed_updates=['message', 'callback_query'],
             drop_pending_updates=True
         )
+        
+        # Keep the bot running
+        try:
+            await asyncio.Event().wait()
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
-        sys.exit(1)
+        raise
+    finally:
+        # Properly shutdown the application
+        try:
+            if 'application' in locals():
+                await application.updater.stop()
+                await application.stop()
+                await application.shutdown()
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
 
 async def error_handler(update, context):
     """Global error handler"""
@@ -166,6 +185,43 @@ def print_startup_banner():
     """
     print(banner)
 
+def run_bot():
+    """Run the bot with proper event loop handling"""
+    try:
+        # Try to get existing event loop
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If loop is already running, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        # No event loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("\n👋 Bot stopped by user. Goodbye!")
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
+        sys.exit(1)
+    finally:
+        try:
+            # Cancel all running tasks
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            
+            # Wait for all tasks to complete
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            
+            # Close the loop
+            loop.close()
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+
 if __name__ == '__main__':
     # Print startup banner
     print_startup_banner()
@@ -175,11 +231,5 @@ if __name__ == '__main__':
         print("❌ Missing dependencies. Please install required packages.")
         sys.exit(1)
     
-    try:
-        # Run the bot
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n👋 Bot stopped by user. Goodbye!")
-    except Exception as e:
-        print(f"❌ Fatal error: {e}")
-        sys.exit(1)
+    # Run the bot
+    run_bot()

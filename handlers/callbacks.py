@@ -6,7 +6,10 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from services.downloader import downloader, ProgressTracker, FileUploader
-from utils.keyboards import create_quality_keyboard, create_content_type_keyboard
+from utils.keyboards import (
+    create_quality_keyboard, create_content_type_keyboard, create_main_menu_keyboard,
+    create_completion_keyboard, create_help_keyboard
+)
 from utils.messages import MessageTemplates
 
 logger = logging.getLogger(__name__)
@@ -245,14 +248,19 @@ async def start_download(query, url: str, content_type: str, quality: str,
             caption=caption
         )
         
-        # Send completion message
+        # Send completion message with navigation buttons
         completion_text = MessageTemplates.download_complete(
             filename=result['title'],
             filesize=result['filesize'],
             content_type=content_type
         )
         
-        await query.edit_message_text(completion_text, parse_mode='HTML')
+        completion_keyboard = create_completion_keyboard()
+        await query.edit_message_text(
+            completion_text,
+            reply_markup=completion_keyboard,
+            parse_mode='HTML'
+        )
         
         # Clear user data
         context.user_data.clear()
@@ -270,6 +278,81 @@ async def start_download(query, url: str, content_type: str, quality: str,
         error_message = "❌ Download failed due to an unexpected error. Please try again."
         await query.edit_message_text(error_message, parse_mode='HTML')
         logger.error(f"Unexpected download error for user {user_id}: {e}")
+
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle main menu callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    user = update.effective_user
+    user_id = user.id
+    
+    logger.info(f"Menu callback from user {user_id}: {query.data}")
+    
+    try:
+        menu_action = query.data.split('_')[1]  # Extract action from callback_data
+        
+        if menu_action == "download":
+            # Show download prompt
+            download_text = MessageTemplates.download_prompt_message()
+            keyboard = create_main_menu_keyboard()
+            await query.edit_message_text(
+                download_text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+            
+        elif menu_action == "help":
+            # Show help message
+            help_text = MessageTemplates.help_message()
+            keyboard = create_help_keyboard()
+            await query.edit_message_text(
+                help_text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+            
+        elif menu_action == "stats":
+            # Show user stats (simplified version)
+            try:
+                from utils.rate_limiter import rate_limiter
+                remaining = rate_limiter.get_remaining_requests(user_id)
+                stats_text = (
+                    f"📊 <b>Your Statistics</b>\n\n"
+                    f"⏳ <b>Remaining downloads:</b> {remaining}/5 this hour\n"
+                    f"🔄 <b>Rate limit:</b> 5 downloads per hour\n"
+                    f"📁 <b>Max file size:</b> 50MB\n\n"
+                    f"💡 <b>Tip:</b> Audio files are much smaller than videos!"
+                )
+                keyboard = create_main_menu_keyboard()
+                await query.edit_message_text(
+                    stats_text,
+                    reply_markup=keyboard,
+                    parse_mode='HTML'
+                )
+            except Exception as e:
+                logger.error(f"Stats error: {e}")
+                await query.edit_message_text(
+                    "❌ Failed to retrieve statistics.",
+                    parse_mode='HTML'
+                )
+                
+        elif menu_action == "main":
+            # Show main menu
+            main_menu_text = MessageTemplates.main_menu_message()
+            keyboard = create_main_menu_keyboard()
+            await query.edit_message_text(
+                main_menu_text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+            
+    except Exception as e:
+        logger.error(f"Menu callback error for user {user_id}: {e}")
+        await query.edit_message_text(
+            "❌ An error occurred. Please try again.",
+            parse_mode='HTML'
+        )
 
 def setup_callback_handlers(application) -> None:
     """Set up all callback handlers"""
@@ -292,8 +375,14 @@ def setup_callback_handlers(application) -> None:
     ))
     
     application.add_handler(CallbackQueryHandler(
-        cancel_callback, 
+        cancel_callback,
         pattern=r'^cancel$'
+    ))
+    
+    # Add menu callback handlers
+    application.add_handler(CallbackQueryHandler(
+        menu_callback,
+        pattern=r'^menu_(download|help|stats|main)$'
     ))
     
     logger.info("Callback handlers set up successfully")
