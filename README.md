@@ -251,9 +251,6 @@ tail -f logs/bot.log
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
@@ -281,5 +278,8 @@ pip install -r requirements.txt --upgrade
 ---
 
 **Made with ❤️ for the Telegram community**
+Buy me a coffe:
+crypto, USDT TRC 20 -> TH1F5Vkz2abHBVhXZWYZvQ2WQrm99xDM1z
+crypto, BTC -> bc1q0grfwrswg7lkqgrrj86ktnahhqpl0eua2pwhvl
 
 *Fast, reliable, and feature-rich video downloading at your fingertips!*
