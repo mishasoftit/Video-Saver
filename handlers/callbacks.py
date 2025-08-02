@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 from services.downloader import downloader, ProgressTracker, FileUploader
 from utils.keyboards import (
     create_quality_keyboard, create_content_type_keyboard, create_main_menu_keyboard,
-    create_completion_keyboard, create_help_keyboard
+    create_completion_keyboard, create_help_keyboard, create_retry_keyboard, create_error_keyboard
 )
 from utils.messages import MessageTemplates
 
@@ -30,7 +30,9 @@ async def content_type_callback(update: Update, context: ContextTypes.DEFAULT_TY
         parts = callback_data.split('_')
         
         if len(parts) != 3 or parts[0] != 'type':
-            await query.edit_message_text("❌ Invalid selection.")
+            error_text = "❌ Invalid selection."
+            keyboard = create_error_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         content_type = parts[1]  # 'video' or 'audio'
@@ -41,18 +43,16 @@ async def content_type_callback(update: Update, context: ContextTypes.DEFAULT_TY
         current_url = context.user_data.get('current_url')
         
         if not video_info or not current_url:
-            await query.edit_message_text(
-                "❌ Session expired. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Session expired. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Verify URL hash matches
         if str(hash(current_url) % 10000) != url_hash:
-            await query.edit_message_text(
-                "❌ Invalid session. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Invalid session. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Store selected content type
@@ -63,20 +63,15 @@ async def content_type_callback(update: Update, context: ContextTypes.DEFAULT_TY
         
         # Update message with quality selection
         quality_selection_text = MessageTemplates.quality_selection(content_type, video_info)
-        await query.edit_message_text(
-            quality_selection_text,
-            reply_markup=keyboard,
-            parse_mode='HTML'
-        )
+        await safe_edit_message(query, quality_selection_text, keyboard)
         
         logger.info(f"Content type selected by user {user_id}: {content_type}")
         
     except Exception as e:
         logger.error(f"Content type callback error for user {user_id}: {e}")
-        await query.edit_message_text(
-            "❌ An error occurred. Please try again with /download",
-            parse_mode='HTML'
-        )
+        error_text = "❌ An error occurred. Please try again with /download"
+        keyboard = create_main_menu_keyboard()
+        await safe_edit_message(query, error_text, keyboard)
 
 async def quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle quality/format selection"""
@@ -94,7 +89,9 @@ async def quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         parts = callback_data.split('_')
         
         if len(parts) != 4 or parts[0] != 'quality':
-            await query.edit_message_text("❌ Invalid selection.")
+            error_text = "❌ Invalid selection."
+            keyboard = create_error_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         content_type = parts[1]  # 'video' or 'audio'
@@ -107,19 +104,17 @@ async def quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         stored_content_type = context.user_data.get('content_type')
         
         if not all([video_info, current_url, stored_content_type]):
-            await query.edit_message_text(
-                "❌ Session expired. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Session expired. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Verify data consistency
-        if (str(hash(current_url) % 10000) != url_hash or 
+        if (str(hash(current_url) % 10000) != url_hash or
             content_type != stored_content_type):
-            await query.edit_message_text(
-                "❌ Invalid session. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Invalid session. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Start download process
@@ -127,10 +122,9 @@ async def quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
     except Exception as e:
         logger.error(f"Quality callback error for user {user_id}: {e}")
-        await query.edit_message_text(
-            "❌ An error occurred during download. Please try again.",
-            parse_mode='HTML'
-        )
+        error_text = "❌ An error occurred during download. Please try again."
+        keyboard = create_main_menu_keyboard()
+        await safe_edit_message(query, error_text, keyboard)
 
 async def back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle back button"""
@@ -148,7 +142,9 @@ async def back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         parts = callback_data.split('_')
         
         if len(parts) != 3 or parts[0] != 'back' or parts[1] != 'type':
-            await query.edit_message_text("❌ Invalid selection.")
+            error_text = "❌ Invalid selection."
+            keyboard = create_error_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         url_hash = parts[2]
@@ -158,18 +154,16 @@ async def back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         current_url = context.user_data.get('current_url')
         
         if not video_info or not current_url:
-            await query.edit_message_text(
-                "❌ Session expired. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Session expired. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Verify URL hash
         if str(hash(current_url) % 10000) != url_hash:
-            await query.edit_message_text(
-                "❌ Invalid session. Please use /download again.",
-                parse_mode='HTML'
-            )
+            error_text = "❌ Invalid session. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
             return
         
         # Clear content type selection
@@ -179,20 +173,15 @@ async def back_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         keyboard = create_content_type_keyboard(current_url)
         content_selection_text = MessageTemplates.content_type_selection(video_info)
         
-        await query.edit_message_text(
-            content_selection_text,
-            reply_markup=keyboard,
-            parse_mode='HTML'
-        )
+        await safe_edit_message(query, content_selection_text, keyboard)
         
         logger.info(f"User {user_id} went back to content type selection")
         
     except Exception as e:
         logger.error(f"Back callback error for user {user_id}: {e}")
-        await query.edit_message_text(
-            "❌ An error occurred. Please try again with /download",
-            parse_mode='HTML'
-        )
+        error_text = "❌ An error occurred. Please try again with /download"
+        keyboard = create_main_menu_keyboard()
+        await safe_edit_message(query, error_text, keyboard)
 
 async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle cancel button"""
@@ -207,10 +196,9 @@ async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # Clear user data
     context.user_data.clear()
     
-    await query.edit_message_text(
-        "❌ <b>Download cancelled.</b>\n\nYou can start a new download with /download",
-        parse_mode='HTML'
-    )
+    cancel_text = "❌ <b>Download cancelled.</b>\n\nYou can start a new download with /download"
+    keyboard = create_main_menu_keyboard()
+    await safe_edit_message(query, cancel_text, keyboard)
 
 async def start_download(query, url: str, content_type: str, quality: str, 
                         video_info: dict, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -256,11 +244,7 @@ async def start_download(query, url: str, content_type: str, quality: str,
         )
         
         completion_keyboard = create_completion_keyboard()
-        await query.edit_message_text(
-            completion_text,
-            reply_markup=completion_keyboard,
-            parse_mode='HTML'
-        )
+        await safe_edit_message(query, completion_text, completion_keyboard)
         
         # Clear user data
         context.user_data.clear()
@@ -269,14 +253,16 @@ async def start_download(query, url: str, content_type: str, quality: str,
         
     except ValueError as e:
         # Handle expected errors
-        error_message = str(e)
-        await query.edit_message_text(f"❌ {error_message}", parse_mode='HTML')
-        logger.warning(f"Download failed for user {user_id}: {error_message}")
+        error_message = f"❌ {str(e)}"
+        keyboard = create_retry_keyboard(url)
+        await safe_edit_message(query, error_message, keyboard)
+        logger.warning(f"Download failed for user {user_id}: {str(e)}")
         
     except Exception as e:
         # Handle unexpected errors
         error_message = "❌ Download failed due to an unexpected error. Please try again."
-        await query.edit_message_text(error_message, parse_mode='HTML')
+        keyboard = create_retry_keyboard(url)
+        await safe_edit_message(query, error_message, keyboard)
         logger.error(f"Unexpected download error for user {user_id}: {e}")
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -296,21 +282,13 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             # Show download prompt
             download_text = MessageTemplates.download_prompt_message()
             keyboard = create_main_menu_keyboard()
-            await query.edit_message_text(
-                download_text,
-                reply_markup=keyboard,
-                parse_mode='HTML'
-            )
+            await safe_edit_message(query, download_text, keyboard)
             
         elif menu_action == "help":
             # Show help message
             help_text = MessageTemplates.help_message()
             keyboard = create_help_keyboard()
-            await query.edit_message_text(
-                help_text,
-                reply_markup=keyboard,
-                parse_mode='HTML'
-            )
+            await safe_edit_message(query, help_text, keyboard)
             
         elif menu_action == "stats":
             # Show user stats (simplified version)
@@ -321,38 +299,60 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     f"📊 <b>Your Statistics</b>\n\n"
                     f"⏳ <b>Remaining downloads:</b> {remaining}/5 this hour\n"
                     f"🔄 <b>Rate limit:</b> 5 downloads per hour\n"
-                    f"📁 <b>Max file size:</b> 50MB\n\n"
+                    f"📁 <b>Max file size:</b> 10GB\n\n"
                     f"💡 <b>Tip:</b> Audio files are much smaller than videos!"
                 )
                 keyboard = create_main_menu_keyboard()
-                await query.edit_message_text(
-                    stats_text,
-                    reply_markup=keyboard,
-                    parse_mode='HTML'
-                )
+                await safe_edit_message(query, stats_text, keyboard)
             except Exception as e:
                 logger.error(f"Stats error: {e}")
-                await query.edit_message_text(
-                    "❌ Failed to retrieve statistics.",
-                    parse_mode='HTML'
-                )
+                error_text = "❌ Failed to retrieve statistics."
+                keyboard = create_main_menu_keyboard()
+                await safe_edit_message(query, error_text, keyboard)
                 
         elif menu_action == "main":
             # Show main menu
             main_menu_text = MessageTemplates.main_menu_message()
             keyboard = create_main_menu_keyboard()
-            await query.edit_message_text(
-                main_menu_text,
-                reply_markup=keyboard,
-                parse_mode='HTML'
-            )
+            await safe_edit_message(query, main_menu_text, keyboard)
             
     except Exception as e:
         logger.error(f"Menu callback error for user {user_id}: {e}")
-        await query.edit_message_text(
-            "❌ An error occurred. Please try again.",
-            parse_mode='HTML'
-        )
+        error_text = "❌ An error occurred. Please try again."
+        keyboard = create_main_menu_keyboard()
+        await safe_edit_message(query, error_text, keyboard)
+
+async def safe_edit_message(query, text: str, keyboard=None):
+    """Safely edit message, avoiding 'Message is not modified' errors"""
+    try:
+        current_text = query.message.text
+        current_markup = query.message.reply_markup
+        
+        # Check if content or markup has changed
+        text_changed = current_text != text
+        markup_changed = (current_markup != keyboard) if keyboard else (current_markup is not None)
+        
+        if text_changed or markup_changed:
+            await query.edit_message_text(
+                text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        else:
+            # Content is identical, just answer the callback to avoid timeout
+            logger.debug("Message content unchanged, skipping edit")
+            
+    except Exception as e:
+        logger.error(f"Safe edit message failed: {e}")
+        # Fallback: try to send a new message if editing fails
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        except Exception as fallback_error:
+            logger.error(f"Fallback message send failed: {fallback_error}")
 
 def setup_callback_handlers(application) -> None:
     """Set up all callback handlers"""

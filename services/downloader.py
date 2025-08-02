@@ -142,7 +142,7 @@ class EnhancedVideoDownloader:
             # Check file size limit
             if is_file_too_large(filename):
                 cleanup_file(filename)
-                raise ValueError("File too large for Telegram (>50MB)")
+                raise ValueError("File too large for Telegram (>10GB)")
             
             download_result = {
                 'filename': filename,
@@ -257,7 +257,7 @@ class FileUploader:
                 raise ValueError("File is empty")
             
             if is_file_too_large(file_path):
-                raise ValueError("File too large for Telegram")
+                raise ValueError("File too large for Telegram (>10GB)")
             
             # Upload based on content type
             with open(file_path, 'rb') as file:

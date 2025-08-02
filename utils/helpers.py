@@ -27,8 +27,12 @@ def get_file_size(file_path: str) -> int:
         logger.error(f"Failed to get file size for {file_path}: {e}")
     return 0
 
-def is_file_too_large(file_path: str, max_size_mb: int = 50) -> bool:
+def is_file_too_large(file_path: str, max_size_mb: int = None) -> bool:
     """Check if file is too large for Telegram"""
+    if max_size_mb is None:
+        from config import Config
+        max_size_mb = Config.MAX_FILE_SIZE_MB
+    
     file_size = get_file_size(file_path)
     max_size_bytes = max_size_mb * 1024 * 1024
     return file_size > max_size_bytes

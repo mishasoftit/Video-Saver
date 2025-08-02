@@ -65,7 +65,7 @@ class MessageTemplates:
             "• 🎼 M4A - High quality, smaller size\n"
             "• 🎶 OGG - Open source format\n\n"
             "⚠️ <b>Limitations:</b>\n"
-            "• Maximum file size: 50MB\n"
+            "• Maximum file size: 10GB\n"
             "• Rate limit: 5 downloads per hour\n"
             "• Private content not supported\n\n"
             "💡 <b>Tip:</b> Just paste any video link - no commands needed!"
@@ -167,21 +167,18 @@ class MessageTemplates:
     def no_url_found_message() -> str:
         return (
             "🤔 <b>No video URL found!</b>\n\n"
-            "Please send me a valid video URL from any supported platform.\n\n"
+            "Please paste a valid video link.\n\n"
             "💡 <b>Examples:</b>\n"
-            "• https://youtube.com/watch?v=...\n"
-            "• https://tiktok.com/@user/video/...\n"
-            "• https://instagram.com/p/...\n\n"
-            "Or use the buttons below to get started!"
+            "• YouTube: https://youtube.com/watch?v=...\n"
+            "• TikTok: https://tiktok.com/@user/video/...\n"
+            "• Instagram: https://instagram.com/p/..."
         )
     
     @staticmethod
     def download_prompt_message() -> str:
         return (
-            "📥 <b>Ready to Download!</b>\n\n"
-            "Send me any video URL and I'll help you download it.\n\n"
-            "🌐 <b>Supported platforms:</b> YouTube, TikTok, Instagram, Twitter, and 1000+ more!\n\n"
-            "Just paste the link - no commands needed! ✨"
+            "📥 <b>Paste your video link below</b>\n\n"
+            "✨ Just send me the URL - I'll handle the rest!"
         )
     
     @staticmethod

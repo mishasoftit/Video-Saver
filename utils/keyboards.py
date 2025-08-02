@@ -63,7 +63,8 @@ def create_completion_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard shown after successful download"""
     keyboard = [
         [InlineKeyboardButton("📥 Download Another", callback_data="menu_download")],
-        [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")]
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")],
+        [InlineKeyboardButton("❓ Help", callback_data="menu_help")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -71,6 +72,16 @@ def create_help_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard for help message"""
     keyboard = [
         [InlineKeyboardButton("📥 Start Download", callback_data="menu_download")],
-        [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")]
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")],
+        [InlineKeyboardButton("📊 My Stats", callback_data="menu_stats")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def create_error_keyboard() -> InlineKeyboardMarkup:
+    """Create keyboard for error messages"""
+    keyboard = [
+        [InlineKeyboardButton("🔄 Try Again", callback_data="menu_download")],
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")],
+        [InlineKeyboardButton("❓ Help", callback_data="menu_help")]
     ]
     return InlineKeyboardMarkup(keyboard)
