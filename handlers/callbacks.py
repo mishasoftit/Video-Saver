@@ -8,7 +8,8 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 from services.downloader import downloader, ProgressTracker, FileUploader
 from utils.keyboards import (
     create_quality_keyboard, create_content_type_keyboard, create_main_menu_keyboard,
-    create_completion_keyboard, create_help_keyboard, create_retry_keyboard, create_error_keyboard
+    create_completion_keyboard, create_help_keyboard, create_retry_keyboard, create_error_keyboard,
+    create_cancel_keyboard
 )
 from utils.messages import MessageTemplates
 
@@ -200,7 +201,7 @@ async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     keyboard = create_main_menu_keyboard()
     await safe_edit_message(query, cancel_text, keyboard)
 
-async def start_download(query, url: str, content_type: str, quality: str, 
+async def start_download(query, url: str, content_type: str, quality: str,
                         video_info: dict, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start the download process"""
     user_id = query.from_user.id
@@ -208,6 +209,15 @@ async def start_download(query, url: str, content_type: str, quality: str,
     logger.info(f"Starting {content_type} download for user {user_id}: {quality}")
     
     try:
+        # Check and consume rate limit at download start
+        from utils.rate_limiter import rate_limiter
+        is_allowed, reset_time = rate_limiter.is_allowed(user_id)
+        if not is_allowed:
+            rate_limit_text = MessageTemplates.rate_limit_message(reset_time)
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, rate_limit_text, keyboard)
+            return
+        
         # Update message to show download starting
         download_starting_text = MessageTemplates.download_starting(content_type, quality)
         await query.edit_message_text(download_starting_text, parse_mode='HTML')
@@ -252,14 +262,20 @@ async def start_download(query, url: str, content_type: str, quality: str,
         logger.info(f"Successfully completed {content_type} download for user {user_id}")
         
     except ValueError as e:
-        # Handle expected errors
+        # Handle expected errors - refund rate limit on failure
+        from utils.rate_limiter import rate_limiter
+        rate_limiter.refund_request(user_id)
+        
         error_message = f"❌ {str(e)}"
         keyboard = create_retry_keyboard(url)
         await safe_edit_message(query, error_message, keyboard)
         logger.warning(f"Download failed for user {user_id}: {str(e)}")
         
     except Exception as e:
-        # Handle unexpected errors
+        # Handle unexpected errors - refund rate limit on failure
+        from utils.rate_limiter import rate_limiter
+        rate_limiter.refund_request(user_id)
+        
         error_message = "❌ Download failed due to an unexpected error. Please try again."
         keyboard = create_retry_keyboard(url)
         await safe_edit_message(query, error_message, keyboard)
@@ -279,9 +295,9 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         menu_action = query.data.split('_')[1]  # Extract action from callback_data
         
         if menu_action == "download":
-            # Show download prompt
-            download_text = MessageTemplates.download_prompt_message()
-            keyboard = create_main_menu_keyboard()
+            # Show download prompt with waiting message
+            download_text = MessageTemplates.waiting_for_link_message()
+            keyboard = create_cancel_keyboard()
             await safe_edit_message(query, download_text, keyboard)
             
         elif menu_action == "help":
@@ -299,10 +315,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     f"📊 <b>Your Statistics</b>\n\n"
                     f"⏳ <b>Remaining downloads:</b> {remaining}/5 this hour\n"
                     f"🔄 <b>Rate limit:</b> 5 downloads per hour\n"
-                    f"📁 <b>Max file size:</b> 10GB\n\n"
+                    f"📁 <b>Max file size:</b> 50MB\n\n"
                     f"💡 <b>Tip:</b> Audio files are much smaller than videos!"
                 )
-                keyboard = create_main_menu_keyboard()
+                from utils.keyboards import create_stats_keyboard
+                keyboard = create_stats_keyboard()
                 await safe_edit_message(query, stats_text, keyboard)
             except Exception as e:
                 logger.error(f"Stats error: {e}")
@@ -322,7 +339,64 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         keyboard = create_main_menu_keyboard()
         await safe_edit_message(query, error_text, keyboard)
 
-async def safe_edit_message(query, text: str, keyboard=None):
+async def retry_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle retry button after failed download"""
+    query = update.callback_query
+    await query.answer()
+    
+    user = update.effective_user
+    user_id = user.id
+    
+    logger.info(f"Retry callback from user {user_id}: {query.data}")
+    
+    try:
+        # Parse callback data
+        callback_data = query.data
+        parts = callback_data.split('_')
+        
+        if len(parts) != 2 or parts[0] != 'retry':
+            error_text = "❌ Invalid retry request."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
+            return
+        
+        url_hash = parts[1]
+        
+        # Get stored data
+        video_info = context.user_data.get('video_info')
+        current_url = context.user_data.get('current_url')
+        
+        if not video_info or not current_url:
+            error_text = "❌ Session expired. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
+            return
+        
+        # Verify URL hash
+        if str(hash(current_url) % 10000) != url_hash:
+            error_text = "❌ Invalid session. Please use /download again."
+            keyboard = create_main_menu_keyboard()
+            await safe_edit_message(query, error_text, keyboard)
+            return
+        
+        # Clear previous selections and start over
+        context.user_data.pop('content_type', None)
+        
+        # Show content type selection again
+        keyboard = create_content_type_keyboard(current_url)
+        content_selection_text = MessageTemplates.content_type_selection(video_info)
+        
+        await safe_edit_message(query, content_selection_text, keyboard)
+        
+        logger.info(f"User {user_id} retrying download")
+        
+    except Exception as e:
+        logger.error(f"Retry callback error for user {user_id}: {e}")
+        error_text = "❌ An error occurred. Please try again with /download"
+        keyboard = create_main_menu_keyboard()
+        await safe_edit_message(query, error_text, keyboard)
+
+async def safe_edit_message(query, text: str, keyboard=None, delete_previous=False):
     """Safely edit message, avoiding 'Message is not modified' errors"""
     try:
         current_text = query.message.text
@@ -333,11 +407,31 @@ async def safe_edit_message(query, text: str, keyboard=None):
         markup_changed = (current_markup != keyboard) if keyboard else (current_markup is not None)
         
         if text_changed or markup_changed:
-            await query.edit_message_text(
-                text,
-                reply_markup=keyboard,
-                parse_mode='HTML'
-            )
+            if delete_previous:
+                # Delete the current message and send a new one
+                try:
+                    await query.message.delete()
+                    new_message = await query.message.reply_text(
+                        text,
+                        reply_markup=keyboard,
+                        parse_mode='HTML'
+                    )
+                    # Update the query message reference for future operations
+                    query.message = new_message
+                except Exception as delete_error:
+                    logger.warning(f"Failed to delete previous message: {delete_error}")
+                    # Fallback to editing
+                    await query.edit_message_text(
+                        text,
+                        reply_markup=keyboard,
+                        parse_mode='HTML'
+                    )
+            else:
+                await query.edit_message_text(
+                    text,
+                    reply_markup=keyboard,
+                    parse_mode='HTML'
+                )
         else:
             # Content is identical, just answer the callback to avoid timeout
             logger.debug("Message content unchanged, skipping edit")
@@ -353,6 +447,29 @@ async def safe_edit_message(query, text: str, keyboard=None):
             )
         except Exception as fallback_error:
             logger.error(f"Fallback message send failed: {fallback_error}")
+
+async def safe_delete_and_send(bot, chat_id: int, message_id: int, text: str, keyboard=None):
+    """Delete a message and send a new one"""
+    try:
+        # Delete the old message
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+        
+        # Send new message
+        return await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
+    except Exception as e:
+        logger.warning(f"Failed to delete and send message: {e}")
+        # Fallback: just send the new message
+        return await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
 
 def setup_callback_handlers(application) -> None:
     """Set up all callback handlers"""
@@ -383,6 +500,12 @@ def setup_callback_handlers(application) -> None:
     application.add_handler(CallbackQueryHandler(
         menu_callback,
         pattern=r'^menu_(download|help|stats|main)$'
+    ))
+    
+    # Add retry callback handler
+    application.add_handler(CallbackQueryHandler(
+        retry_callback,
+        pattern=r'^retry_\d+$'
     ))
     
     logger.info("Callback handlers set up successfully")

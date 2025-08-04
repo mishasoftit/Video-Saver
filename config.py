@@ -15,8 +15,8 @@ class Config:
     if not TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
     
-    # Download settings
-    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', 10240))  # 10GB = 10240MB
+    # Download settings - Telegram bot limit is 50MB
+    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', 50))  # 50MB for Telegram bots
     DOWNLOAD_TIMEOUT = int(os.getenv('DOWNLOAD_TIMEOUT', 600))    # Increased timeout for larger files
     TEMP_DIR = os.getenv('TEMP_DIR', './downloads')
     
@@ -32,7 +32,7 @@ class Config:
     # yt-dlp base options
     YT_DLP_OPTIONS = {
         'outtmpl': f'{TEMP_DIR}/%(title)s.%(ext)s',
-        'format': 'best[filesize<10G]',
+        'format': 'best',
         'noplaylist': True,
         'extractaudio': False,
         'embed_subs': False,
@@ -43,22 +43,22 @@ class Config:
 # Enhanced download options with video and audio support
 DOWNLOAD_OPTIONS = {
     'video': {
-        '720p': {
-            'format': 'best[height<=720][filesize<10G]',
+        '360p': {
+            'format': 'worst[height<=360]/worst[height<=480]/worst',
             'emoji': '📱',
-            'description': '720p (Fast)',
+            'description': '360p (Smallest)',
             'type': 'video'
         },
-        '1080p': {
-            'format': 'best[height<=1080][filesize<10G]',
+        '480p': {
+            'format': 'worst[height<=480]/worst[height<=360]/worst',
             'emoji': '🎬',
-            'description': '1080p (Balanced)',
+            'description': '480p (Small)',
             'type': 'video'
         },
-        'best': {
-            'format': 'best[filesize<10G]',
-            'emoji': '⭐',
-            'description': 'Best (Highest)',
+        'audio': {
+            'format': 'bestaudio[ext=m4a]/bestaudio',
+            'emoji': '🎵',
+            'description': 'Audio Only (Smallest)',
             'type': 'video'
         }
     },
@@ -104,14 +104,14 @@ ERROR_MESSAGES = {
     'rate_limit': "⏰ Rate limit exceeded. You can download {max_requests} videos per hour.\n⏳ Try again in {reset_time} minutes.",
     'invalid_url': "❌ Invalid URL format. Please provide a valid video URL.",
     'unsupported': "❌ This platform is not supported or the video is unavailable.",
-    'file_too_large': "❌ Video file is too large (>10GB). Try selecting a lower quality.",
+    'file_too_large': "❌ Video file is too large (>50MB). Try selecting a lower quality.",
     'network_error': "❌ Network error. Please check your connection and try again.",
     'download_failed': "❌ Download failed. The video might be private or deleted.",
     'timeout': "❌ Download timeout. The video might be too large or server is slow.",
     'ffmpeg_missing': "❌ FFmpeg not found. Audio extraction requires FFmpeg to be installed.",
     'audio_extraction_failed': "❌ Failed to extract audio. The video might not contain audio.",
     'unsupported_audio_format': "❌ Audio format not supported for this video.",
-    'audio_too_large': "❌ Audio file is too large (>10GB). Try a different format.",
+    'audio_too_large': "❌ Audio file is too large (>50MB). Try a different format.",
     'no_audio_stream': "❌ No audio stream found in this video."
 }
 

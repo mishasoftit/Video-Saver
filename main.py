@@ -21,19 +21,50 @@ def setup_logging():
     import os
     os.makedirs('logs', exist_ok=True)
     
-    # Configure logging
-    logging.basicConfig(
-        level=getattr(logging, Config.LOG_LEVEL),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            RotatingFileHandler(
-                'logs/bot.log', 
-                maxBytes=10*1024*1024,  # 10MB
-                backupCount=5
-            ),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
+    # Configure UTF-8 encoding for console output on Windows
+    if sys.platform.startswith('win'):
+        try:
+            import codecs
+            import io
+            # Only wrap if not already wrapped
+            if not isinstance(sys.stdout, io.TextIOWrapper):
+                sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'replace')
+            if not isinstance(sys.stderr, io.TextIOWrapper):
+                sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'replace')
+        except Exception:
+            # If encoding setup fails, continue without it
+            pass
+    
+    # Configure logging with error handling
+    try:
+        logging.basicConfig(
+            level=getattr(logging, Config.LOG_LEVEL),
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                RotatingFileHandler(
+                    'logs/bot.log',
+                    maxBytes=10*1024*1024,  # 10MB
+                    backupCount=5,
+                    encoding='utf-8'
+                ),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+    except Exception as e:
+        # Fallback to basic logging if UTF-8 setup fails
+        logging.basicConfig(
+            level=getattr(logging, Config.LOG_LEVEL),
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                RotatingFileHandler(
+                    'logs/bot.log',
+                    maxBytes=10*1024*1024,  # 10MB
+                    backupCount=5
+                ),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        print(f"Warning: UTF-8 logging setup failed: {e}")
     
     # Reduce noise from external libraries
     logging.getLogger('httpx').setLevel(logging.WARNING)

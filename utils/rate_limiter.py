@@ -57,6 +57,14 @@ class RateLimiter:
         logger.debug(f"Request allowed for user {user_id}. Count: {len(user_requests)}/{self.max_requests}")
         return True, 0
     
+    def refund_request(self, user_id: int) -> None:
+        """Refund the most recent request for a user (in case of failure)"""
+        user_requests = self.requests[user_id]
+        if user_requests:
+            # Remove the most recent request
+            user_requests.pop()
+            logger.debug(f"Refunded request for user {user_id}. Count: {len(user_requests)}/{self.max_requests}")
+    
     def get_remaining_requests(self, user_id: int) -> int:
         """Get number of remaining requests for user"""
         now = time.time()

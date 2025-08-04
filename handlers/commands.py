@@ -46,9 +46,10 @@ async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     
     logger.info(f"Download command from user {user_id} ({user.username})")
     
-    # Check rate limit
-    is_allowed, reset_time = rate_limiter.is_allowed(user_id)
-    if not is_allowed:
+    # Check rate limit but don't consume it yet
+    remaining = rate_limiter.get_remaining_requests(user_id)
+    if remaining <= 0:
+        reset_time = rate_limiter.get_reset_time(user_id)
         rate_limit_text = MessageTemplates.rate_limit_message(reset_time)
         await update.message.reply_text(rate_limit_text, parse_mode='HTML')
         return
@@ -173,12 +174,19 @@ async def url_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     url = urls[0]  # Use the first URL found
     
-    # Check rate limit
-    is_allowed, reset_time = rate_limiter.is_allowed(user_id)
-    if not is_allowed:
+    # Check rate limit but don't consume it yet
+    remaining = rate_limiter.get_remaining_requests(user_id)
+    if remaining <= 0:
+        reset_time = rate_limiter.get_reset_time(user_id)
         rate_limit_text = MessageTemplates.rate_limit_message(reset_time)
         await update.message.reply_text(rate_limit_text, parse_mode='HTML')
         return
+    
+    # Delete the user's message to reduce clutter
+    try:
+        await update.message.delete()
+    except Exception as e:
+        logger.warning(f"Failed to delete user message: {e}")
     
     # Show processing message
     processing_msg = await update.message.reply_text(

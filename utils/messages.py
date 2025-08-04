@@ -65,7 +65,7 @@ class MessageTemplates:
             "• 🎼 M4A - High quality, smaller size\n"
             "• 🎶 OGG - Open source format\n\n"
             "⚠️ <b>Limitations:</b>\n"
-            "• Maximum file size: 10GB\n"
+            "• Maximum file size: 50MB\n"
             "• Rate limit: 5 downloads per hour\n"
             "• Private content not supported\n\n"
             "💡 <b>Tip:</b> Just paste any video link - no commands needed!"
@@ -187,4 +187,12 @@ class MessageTemplates:
             "🏠 <b>Main Menu</b>\n\n"
             "What would you like to do?\n\n"
             "💡 <b>Tip:</b> You can also just send me any video URL directly!"
+        )
+    
+    @staticmethod
+    def waiting_for_link_message() -> str:
+        return (
+            "⏳ <b>Waiting for your link...</b>\n\n"
+            "📝 Please paste any video URL and I'll process it for you!\n\n"
+            "🌐 <b>Supported platforms:</b> YouTube, TikTok, Instagram, Twitter, and 1000+ more!"
         )

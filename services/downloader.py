@@ -21,8 +21,8 @@ class ProgressTracker:
         self.last_update = 0
         self.update_interval = update_interval  # Update every N percent
         
-    async def progress_hook(self, d):
-        """Progress hook for yt-dlp"""
+    def progress_hook(self, d):
+        """Progress hook for yt-dlp (synchronous version)"""
         if d['status'] == 'downloading':
             try:
                 percent_str = d.get('_percent_str', '0%').strip('%')
@@ -42,12 +42,14 @@ class ProgressTracker:
                         f"🚀 Speed: {speed}"
                     )
                     
-                    await self.bot.edit_message_text(
-                        chat_id=self.message.chat_id,
-                        message_id=self.message.message_id,
-                        text=text,
-                        parse_mode='HTML'
-                    )
+                    # Schedule the async update
+                    import asyncio
+                    try:
+                        loop = asyncio.get_event_loop()
+                        loop.create_task(self._update_message(text))
+                    except Exception as e:
+                        # If we can't get the loop, just skip the update
+                        pass
                     
                     self.last_update = percent
                     
@@ -57,14 +59,26 @@ class ProgressTracker:
         elif d['status'] == 'finished':
             try:
                 text = "✅ <b>Download completed!</b>\n📤 Uploading to Telegram..."
-                await self.bot.edit_message_text(
-                    chat_id=self.message.chat_id,
-                    message_id=self.message.message_id,
-                    text=text,
-                    parse_mode='HTML'
-                )
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    loop.create_task(self._update_message(text))
+                except Exception:
+                    pass
             except Exception as e:
                 logger.warning(f"Completion update failed: {e}")
+    
+    async def _update_message(self, text: str):
+        """Helper method to update message asynchronously"""
+        try:
+            await self.bot.edit_message_text(
+                chat_id=self.message.chat_id,
+                message_id=self.message.message_id,
+                text=text,
+                parse_mode='HTML'
+            )
+        except Exception as e:
+            logger.warning(f"Message update failed: {e}")
 
 class EnhancedVideoDownloader:
     """Enhanced video and audio downloader with progress tracking"""
@@ -139,10 +153,11 @@ class EnhancedVideoDownloader:
             if filesize == 0:
                 raise ValueError("Downloaded file is empty")
             
-            # Check file size limit
-            if is_file_too_large(filename):
+            # Check file size limit - be more aggressive about size checking
+            filesize_mb = filesize / (1024 * 1024)  # Convert to MB
+            if filesize_mb > 45:  # Use 45MB as safety margin instead of 50MB
                 cleanup_file(filename)
-                raise ValueError("File too large for Telegram (>10GB)")
+                raise ValueError(f"File too large for Telegram ({filesize_mb:.1f}MB > 45MB limit). Try selecting a lower quality or audio format.")
             
             download_result = {
                 'filename': filename,
@@ -257,7 +272,7 @@ class FileUploader:
                 raise ValueError("File is empty")
             
             if is_file_too_large(file_path):
-                raise ValueError("File too large for Telegram (>10GB)")
+                raise ValueError("File too large for Telegram (>50MB)")
             
             # Upload based on content type
             with open(file_path, 'rb') as file:
@@ -284,7 +299,11 @@ class FileUploader:
             
         except Exception as e:
             logger.error(f"Upload failed for {file_path}: {e}")
-            raise ValueError(f"Upload failed: {str(e)}")
+            error_str = str(e)
+            if "413" in error_str or "Request Entity Too Large" in error_str:
+                raise ValueError("File too large for Telegram (>50MB). Try selecting a lower quality or audio format.")
+            else:
+                raise ValueError(f"Upload failed: {str(e)}")
         
         finally:
             # Always cleanup the file after upload attempt
